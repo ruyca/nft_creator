@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from openai import OpenAI
 import os
+import requests
 
 load_dotenv()
 OPENAI_KEY = os.getenv("OPENAI_KEY")
@@ -69,8 +70,32 @@ def query_artist(artist:str) -> dict:
 
     return artist_info
 
+def save_image(url:str, date, artist=None, event_name=None) -> None: 
+    """
+    Locally saves the image provided by ChatGPTs API.
+    """
 
-def create_music_prompt(music_genre, mood, day_or_night, date, state, artist):
+    file_name = f"{artist}_{date}" if artist else f"{event_name}_{date}"
+    file_name = file_name + ".jpg" 
+
+    target_folder = "nft_images"
+
+    file_path = os.path.join(target_folder, file_name)
+
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        # Open the file in binary mode: 
+        with open(file_path, "wb") as file:
+            file.write(response.content)
+        print('Imaged save succesfully')
+    else: 
+        print(f"Failed to retrieve the image with status code: {response.status_code}")
+
+
+
+
+def create_music_prompt(music_genre, mood, day_or_night, date, state, artist) -> str:
     """
     Given details about the concert, the function creates the prompt 
     used for the create_image function.
@@ -82,8 +107,10 @@ def create_music_prompt(music_genre, mood, day_or_night, date, state, artist):
                {day_or_night}, the image should have that lightning. The event will\
                 be held in {state} so you may use some elements from that state."
     
-    print(generate_image(prompt))
-    
+    image_url = generate_image(prompt)
+
+    return image_url
+
     
 
 
@@ -107,12 +134,15 @@ def main():
                      'date':f'{date}', 'state':f'{state}',
                      'artist':f'{artist}'})
 
-        create_music_prompt(**info)
+        url = create_music_prompt(**info)
 
     elif event_type == '1':
         pass
     else: 
         raise Exception("Event type not available")
+    
+    # We have valid url to download
+    save_image(url, date, artist, event_name=None)
     
 
 if __name__ == "__main__":
